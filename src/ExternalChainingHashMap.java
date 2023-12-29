@@ -1,3 +1,5 @@
+import java.util.NoSuchElementException;
+
 /**
  * Your implementation of a ExternalChainingHashMap.
  */
@@ -100,8 +102,34 @@ public class ExternalChainingHashMap<K, V> {
      * @throws java.util.NoSuchElementException   If the key is not in the map.
      */
     public V remove(K key) {
-        // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
-        return null;
+        if (key == null) {
+            throw new IllegalArgumentException("Key is null");
+        } else {
+            int hashCode = Math.abs(key.hashCode());
+            int compressedIndex = hashCode % table.length;
+            ExternalChainingMapEntry<K, V> current = table[compressedIndex];
+            if (current == null) {
+                throw new NoSuchElementException("Key is not in the map");
+            } else {
+                if (current.getKey().equals(key)) {
+                    V oldValue = current.getValue();
+                    table[compressedIndex] = current.getNext();
+                    size--;
+                    return oldValue;
+                } else {
+                    while (current.getNext() != null) {
+                        if (current.getNext().getKey().equals(key)) {
+                            V oldValue = current.getNext().getValue();
+                            current.setNext(current.getNext().getNext());
+                            size--;
+                            return oldValue;
+                        }
+                        current = current.getNext();
+                    }
+                    throw new NoSuchElementException("Key is not in the map");
+                }
+            }
+        }
     }
 
     /**
@@ -122,17 +150,17 @@ public class ExternalChainingHashMap<K, V> {
      * @param Length The new length of the backing table.
      */
     private void resizeBackingTable(int length) {
-        for (int i = 0; i < table.length; i++) {
-            ExternalChainingMapEntry<K, V> current = table[i];
+        ExternalChainingMapEntry<K, V>[] newTable = (ExternalChainingMapEntry<K, V>[]) new ExternalChainingMapEntry[length];
+        for (ExternalChainingMapEntry<K, V> kvExternalChainingMapEntry : table) {
+            ExternalChainingMapEntry<K, V> current = kvExternalChainingMapEntry;
             while (current != null) {
                 int hashCode = Math.abs(current.getKey().hashCode());
-                int compressedIndex = hashCode % length;
-                ExternalChainingMapEntry<K, V> temp = current.getNext();
-                current.setNext(table[compressedIndex]);
-                table[compressedIndex] = current;
-                current = temp;
+                int compressedIndex = hashCode % newTable.length;
+                newTable[compressedIndex] = new ExternalChainingMapEntry<>(current.getKey(), current.getValue(), newTable[compressedIndex]);
+                current = current.getNext();
             }
         }
+        table = newTable;
     }
 
     private double getLoadFactor() {
